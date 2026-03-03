@@ -12,38 +12,22 @@ const config = {
     modelId: process.env.NOVA_MODEL_ID || "amazon.nova-lite-v1:0",
   },
 
-  // ── Google Sheets ──
-  sheets: {
-    spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    credentialsPath: process.env.GOOGLE_CREDENTIALS_PATH || "./src/config/google-credentials.json",
+  // ── Airtable ──
+  airtable: {
+    apiToken: process.env.AIRTABLE_API_TOKEN,
+    baseId: process.env.AIRTABLE_BASE_ID,
   },
 
   // ── Storage ──
   uploadDir: process.env.UPLOAD_DIR || "./uploads",
 
   // ── Parts (clubs/teams) ──
-  // Maps partId → Google Sheet tab name
+  // Maps partId → Airtable table name
   parts: {
-    build: { id: "build", name: "Build", sheetTab: "Build" },
-    programming: { id: "programming", name: "Programming", sheetTab: "Programming" },
-    outreach: { id: "outreach", name: "Outreach", sheetTab: "Outreach" },
+    build: { id: "build", name: "Build", tableName: "Build" },
+    programming: { id: "programming", name: "Programming", tableName: "Programming" },
+    outreach: { id: "outreach", name: "Outreach", tableName: "Outreach" },
   },
-
-  // ── Sheet columns (order matters — this is the column order in each tab) ──
-  sheetColumns: [
-    "Timestamp",
-    "SubmittedBy",
-    "Part",
-    "Merchant",
-    "Date",
-    "Total",
-    "Tax",
-    "Currency",
-    "PaymentMethod",
-    "ReceiptID",
-    "Notes",
-    "Status",
-  ],
 };
 
 module.exports = config;

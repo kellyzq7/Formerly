@@ -221,7 +221,7 @@ export default function ReviewCard({
       {/* ── Google Sheets Preview ── */}
       <div className="mt-5">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          Sheet Preview — this is what will be added
+          Airtable Preview — this is what will be added
         </p>
         <SheetPreview data={previewData} partName={partName} userName={userName} />
       </div>
@@ -241,7 +241,7 @@ export default function ReviewCard({
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
-        Confirm &amp; Submit to Sheets
+        Confirm &amp; Submit to Airtable
       </button>
 
       <button

@@ -65,8 +65,8 @@ app.listen(config.port, () => {
   `);
 
   // Validate config on startup
-  if (!config.sheets.spreadsheetId) {
-    console.warn("⚠️  GOOGLE_SHEET_ID not set — Sheets submission will fail");
+  if (!config.airtable.apiToken || !config.airtable.baseId) {
+    console.warn("⚠️  AIRTABLE credentials not set — submission will fail");
   }
   if (!process.env.AWS_ACCESS_KEY_ID && !process.env.AWS_PROFILE) {
     console.warn("⚠️  AWS credentials not detected — Nova extraction will fail");

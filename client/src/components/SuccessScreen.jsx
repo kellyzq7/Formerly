@@ -27,7 +27,7 @@ export default function SuccessScreen({ partName, onAddAnother, onStartOver }) {
 
       <h2 className="text-2xl font-bold text-gray-900">Submitted!</h2>
       <p className="text-gray-500 mt-2">
-        Receipt added to the <span className="font-semibold text-nova-700">{partName}</span> sheet
+        Receipt added to the <span className="font-semibold text-nova-700">{partName}</span> table in Airtable
       </p>
 
       {/* Actions */}

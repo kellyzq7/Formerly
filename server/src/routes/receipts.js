@@ -12,7 +12,7 @@ const multer = require("multer");
 const path = require("path");
 const config = require("../config");
 const { extractReceipt } = require("../services/novaService");
-const { appendReceiptRow } = require("../services/sheetsService");
+const { appendReceiptRow } = require("../services/airtableService");
 const storage = require("../services/storageService");
 
 const router = express.Router();

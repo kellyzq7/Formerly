@@ -1,13 +1,16 @@
 /**
  * Nova AI Receipt Extraction Service
  *
- * Sends a receipt image to Amazon Nova via Bedrock and returns
- * structured JSON with merchant, date, total, tax, etc.
+ * Sends a receipt image to Amazon Nova Lite via Bedrock's Converse API
+ * and returns structured JSON with merchant, date, total, tax, etc.
+ *
+ * Uses the Converse API (recommended by AWS for Nova multimodal input).
+ * Docs: https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-call.html
  */
 
 const {
   BedrockRuntimeClient,
-  InvokeModelCommand,
+  ConverseCommand,
 } = require("@aws-sdk/client-bedrock-runtime");
 const fs = require("fs");
 const path = require("path");
@@ -18,28 +21,31 @@ const bedrockClient = new BedrockRuntimeClient({
   region: config.aws.region,
 });
 
-// ── Extraction Prompt ──
-const EXTRACTION_PROMPT = `You are a receipt-reading AI. Analyze the receipt image and extract the following fields.
-Return ONLY valid JSON — no markdown, no explanation, no backticks.
+// ── System Prompt ──
+const SYSTEM_PROMPT = `You are a receipt-reading AI. You will be given an image of a receipt.
+Extract the requested fields and return ONLY valid JSON — no markdown, no explanation, no backticks, no extra text.`;
 
-Required JSON schema:
+// ── User Prompt ──
+const USER_PROMPT = `Analyze this receipt image and extract the following fields.
+Return ONLY a valid JSON object matching this exact schema:
+
 {
-  "merchant": string or null,
-  "date": "YYYY-MM-DD" or null,
-  "total": number or null,
-  "tax": number or null,
-  "currency": "USD" (3-letter uppercase) or null,
-  "payment_method": "cash" | "credit" | "debit" | "other" or null,
+  "merchant": "store name as string, or null if unreadable",
+  "date": "YYYY-MM-DD format, or null if unreadable",
+  "total": 0.00,
+  "tax": 0.00,
+  "currency": "USD",
+  "payment_method": "cash or credit or debit or other, or null",
   "confidence": {
-    "merchant": 0.0 to 1.0,
-    "date": 0.0 to 1.0,
-    "total": 0.0 to 1.0,
-    "tax": 0.0 to 1.0
+    "merchant": 0.0,
+    "date": 0.0,
+    "total": 0.0,
+    "tax": 0.0
   }
 }
 
 Rules:
-- total and tax must be numbers (no $ signs)
+- total and tax must be numbers (no $ signs). total is the final amount paid.
 - date must be YYYY-MM-DD format
 - currency must be 3-letter uppercase (e.g., USD, EUR, CAD)
 - confidence is your certainty for each field (1.0 = very sure, 0.0 = guessing)
@@ -47,71 +53,64 @@ Rules:
 - Return ONLY the JSON object, nothing else`;
 
 /**
- * Extract receipt data from an image file using Amazon Nova
+ * Extract receipt data from an image file using Amazon Nova via Converse API
  * @param {string} imagePath - Absolute path to the receipt image
  * @returns {Promise<object>} Extracted receipt data
  */
 async function extractReceipt(imagePath) {
-  // Read the image and convert to base64
-  const imageBuffer = fs.readFileSync(imagePath);
-  const base64Image = imageBuffer.toString("base64");
+  // Read the image as raw bytes (Converse API accepts Uint8Array directly)
+  const imageBytes = fs.readFileSync(imagePath);
 
-  // Determine media type from extension
-  const ext = path.extname(imagePath).toLowerCase();
-  const mediaTypeMap = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".gif": "image/gif",
-    ".webp": "image/webp",
+  // Determine image format from extension
+  const ext = path.extname(imagePath).toLowerCase().replace(".", "");
+  const formatMap = {
+    jpg: "jpeg",
+    jpeg: "jpeg",
+    png: "png",
+    gif: "gif",
+    webp: "webp",
   };
-  const mediaType = mediaTypeMap[ext] || "image/jpeg";
+  const format = formatMap[ext] || "jpeg";
 
-  // ── Build the Nova request payload ──
-  // Amazon Nova uses the Bedrock Messages API format
-  const payload = {
+  // ── Build the Converse API request ──
+  const command = new ConverseCommand({
+    modelId: config.aws.modelId, // "amazon.nova-lite-v1:0"
+    system: [{ text: SYSTEM_PROMPT }],
     messages: [
       {
         role: "user",
         content: [
           {
             image: {
-              format: ext.replace(".", ""), // "jpeg", "png", etc.
+              format: format,
               source: {
-                bytes: base64Image,
+                bytes: imageBytes, // Converse API accepts raw bytes (Uint8Array)
               },
             },
           },
           {
-            text: EXTRACTION_PROMPT,
+            text: USER_PROMPT,
           },
         ],
       },
     ],
     inferenceConfig: {
-      maxNewTokens: 1024,
+      maxTokens: 1024,
       temperature: 0.1, // Low temp for consistent structured output
       topP: 0.9,
     },
-  };
-
-  // ── Call Bedrock ──
-  const command = new InvokeModelCommand({
-    modelId: config.aws.modelId,
-    contentType: "application/json",
-    accept: "application/json",
-    body: JSON.stringify(payload),
   });
 
+  // ── Call Bedrock ──
+  console.log(`[Nova] Sending image to ${config.aws.modelId} via Converse API...`);
   const response = await bedrockClient.send(command);
-  const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
-  // ── Parse Nova's response ──
-  // Nova returns { output: { message: { content: [{ text: "..." }] } } }
-  const rawText =
-    responseBody.output?.message?.content?.[0]?.text ||
-    responseBody.content?.[0]?.text ||
-    "";
+  // ── Parse the Converse API response ──
+  // Response structure: { output: { message: { role, content: [{ text }] } }, stopReason, usage }
+  const rawText = response.output?.message?.content?.[0]?.text || "";
+
+  console.log(`[Nova] Raw response (${response.stopReason}):`, rawText.substring(0, 200));
+  console.log(`[Nova] Tokens — input: ${response.usage?.inputTokens}, output: ${response.usage?.outputTokens}`);
 
   // Strip any accidental markdown fences
   const cleanJson = rawText
@@ -123,7 +122,7 @@ async function extractReceipt(imagePath) {
   try {
     extracted = JSON.parse(cleanJson);
   } catch (parseError) {
-    console.error("Nova returned invalid JSON:", rawText);
+    console.error("[Nova] Returned invalid JSON:", rawText);
     throw new Error("Failed to parse Nova response as JSON");
   }
 
