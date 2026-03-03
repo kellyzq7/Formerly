@@ -21,11 +21,11 @@ const PART_ICONS = {
 export default function PartPicker({ parts, selectedPart, onSelect, userName }) {
   return (
     <div className="fade-in">
-      <div className="text-center mb-8 pt-4">
-        <h2 className="text-2xl font-bold text-gray-900">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl font-display font-semibold mb-2" style={{ color: "#0F2B46" }}>
           {userName ? `Hey ${userName}!` : "Which team?"}
         </h2>
-        <p className="text-gray-500 mt-1">
+        <p className="text-body-lg" style={{ color: "#0F2B46", opacity: 0.7 }}>
           {parts.length > 1
             ? "Select a club to submit a receipt"
             : "Submit a receipt for your club"}
@@ -37,18 +37,28 @@ export default function PartPicker({ parts, selectedPart, onSelect, userName }) 
           <button
             key={part.id}
             onClick={() => onSelect(part.id)}
-            className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-left
-              ${
-                selectedPart === part.id
-                  ? "border-nova-500 bg-nova-50 shadow-md"
-                  : "border-gray-200 bg-white hover:border-nova-300 hover:shadow-sm"
+            className="w-full flex items-center gap-4 p-5 rounded-card border transition-all duration-200 text-left shadow-soft"
+            style={{
+              backgroundColor: selectedPart === part.id ? "#CFE8F6" : "#FBF7F2",
+              borderColor: selectedPart === part.id ? "#5BA7D1" : "#E4E8ED"
+            }}
+            onMouseEnter={(e) => {
+              if (selectedPart !== part.id) {
+                e.currentTarget.style.borderColor = "#5BA7D1";
               }
-            `}
+            }}
+            onMouseLeave={(e) => {
+              if (selectedPart !== part.id) {
+                e.currentTarget.style.borderColor = "#E4E8ED";
+              }
+            }}
           >
             <div
-              className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0
-              ${selectedPart === part.id ? "bg-nova-100 text-nova-700" : "bg-gray-100 text-gray-500"}
-            `}
+              className="w-14 h-14 rounded-card flex items-center justify-center flex-shrink-0"
+              style={{
+                backgroundColor: selectedPart === part.id ? "#5BA7D1" : "#CFE8F6",
+                color: selectedPart === part.id ? "white" : "#0F2B46"
+              }}
             >
               {PART_ICONS[part.id] || (
                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -56,11 +66,11 @@ export default function PartPicker({ parts, selectedPart, onSelect, userName }) 
                 </svg>
               )}
             </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-lg">{part.name}</p>
-              <p className="text-sm text-gray-500">Submit receipts for {part.name}</p>
+            <div className="flex-1">
+              <p className="font-semibold text-body-lg mb-0.5" style={{ color: "#0F2B46" }}>{part.name}</p>
+              <p className="text-sm" style={{ color: "#0F2B46", opacity: 0.7 }}>Submit receipts for {part.name}</p>
             </div>
-            <svg className="w-5 h-5 text-gray-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#5BA7D1" }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>

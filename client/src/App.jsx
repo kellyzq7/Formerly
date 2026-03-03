@@ -205,7 +205,7 @@ export default function App() {
   const isAuthScreen = screen === SCREENS.SIGNUP || screen === SCREENS.LOGIN;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: "#F6F1E8" }}>
       {!isAuthScreen && (
         <Header
           user={user}
@@ -219,12 +219,12 @@ export default function App() {
         />
       )}
 
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-lg mx-auto px-4" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
         {/* Error banner */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm fade-in">
-            <p className="font-medium">Something went wrong</p>
-            <p>{error}</p>
+          <div className="mb-6 p-4 rounded-card border border-soft shadow-soft fade-in" style={{ backgroundColor: "#FBF7F2" }}>
+            <p className="font-semibold text-navy mb-1" style={{ color: "#0F2B46" }}>Something went wrong</p>
+            <p className="text-sm" style={{ color: "#0F2B46" }}>{error}</p>
           </div>
         )}
 
@@ -263,17 +263,17 @@ export default function App() {
         )}
 
         {screen === SCREENS.EXTRACTING && (
-          <div className="text-center py-16 fade-in">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-nova-100 flex items-center justify-center pulse-glow">
-              <svg className="w-10 h-10 text-nova-600 animate-spin" fill="none" viewBox="0 0 24 24">
+          <div className="text-center fade-in" style={{ paddingTop: "80px", paddingBottom: "80px" }}>
+            <div className="w-20 h-20 mx-auto mb-8 rounded-card flex items-center justify-center" style={{ backgroundColor: "#CFE8F6" }}>
+              <svg className="w-10 h-10 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: "#5BA7D1" }}>
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">Nova is reading your receipt…</h2>
-            <p className="text-gray-500 mt-2">This usually takes a few seconds</p>
+            <h2 className="text-2xl font-display font-semibold mb-2" style={{ color: "#0F2B46" }}>Nova is reading your receipt…</h2>
+            <p className="text-body-lg mt-2" style={{ color: "#0F2B46", opacity: 0.7 }}>This usually takes a few seconds</p>
             {imagePreview && (
-              <img src={imagePreview} alt="Receipt preview" className="mt-6 max-h-48 mx-auto rounded-lg shadow-md opacity-60" />
+              <img src={imagePreview} alt="Receipt preview" className="mt-8 max-h-48 mx-auto rounded-card shadow-soft opacity-60" />
             )}
           </div>
         )}
@@ -291,13 +291,13 @@ export default function App() {
         )}
 
         {screen === SCREENS.SUBMITTING && (
-          <div className="text-center py-16 fade-in">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center animate-pulse">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center fade-in" style={{ paddingTop: "80px", paddingBottom: "80px" }}>
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: "#CFE8F6" }}>
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#5BA7D1" }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">Submitting to Sheets…</h2>
+            <h2 className="text-2xl font-display font-semibold" style={{ color: "#0F2B46" }}>Submitting to Sheets…</h2>
           </div>
         )}
 
