@@ -1,5 +1,5 @@
 # Formerly
-# 📄 Nova Receipt Reimbursement App
+# Nova Receipt Reimbursement App
 
 AI-powered receipt scanning and reimbursement tracking for clubs/teams.
 Upload a receipt photo → Nova AI extracts details → Review & submit → Appended to Airtable.
