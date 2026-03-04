@@ -39,20 +39,7 @@ cp server/.env.example server/.env
 # Fill in your credentials (see below)
 ```
 
-### 3. Airtable Setup
-1. Go to Google Cloud Console → Create project → Enable Airtable API
-2. Create a Service Account → Download JSON key
-3. Save the JSON key as `server/src/config/google-credentials.json`
-4. Create a Google Sheet with tabs: `Build`, `Programming`, `Outreach`
-5. Share the sheet with your service account email (Editor access)
-6. Copy the Sheet ID from the URL and add to `.env`
-
-### 4. AWS Bedrock Setup
-1. Ensure your AWS account has access to Amazon Nova models in Bedrock
-2. In AWS Console → Bedrock → Model access → Enable `amazon.nova-lite-v1:0`
-3. Configure AWS credentials (`~/.aws/credentials` or env vars)
-
-### 5. Run
+### 3. Run
 ```bash
 # Terminal 1 — Backend
 cd server && npm run dev
