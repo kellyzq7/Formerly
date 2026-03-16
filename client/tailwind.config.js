@@ -4,40 +4,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: {
-          bg: "#F6F1E8",
-          section: "#FBF7F2",
-        },
-        navy: {
-          DEFAULT: "#0F2B46",
-        },
-        sky: {
-          DEFAULT: "#CFE8F6",
-        },
-        blue: {
-          interactive: "#5BA7D1",
-        },
-        border: {
-          soft: "#E4E8ED",
+        nova: {
+          50: "#f0f4ff",
+          100: "#dbe4ff",
+          200: "#bac8ff",
+          300: "#91a7ff",
+          400: "#748ffc",
+          500: "#5c7cfa",
+          600: "#4c6ef5",
+          700: "#4263eb",
+          800: "#3b5bdb",
+          900: "#364fc7",
         },
       },
       fontFamily: {
-        display: ['"General Sans"', '"Satoshi"', "system-ui", "sans-serif"],
-        sans: ['"Inter"', "system-ui", "sans-serif"],
+        sans: ['"DM Sans"', "system-ui", "sans-serif"],
         mono: ['"JetBrains Mono"', "monospace"],
-      },
-      fontSize: {
-        body: ["16px", { lineHeight: "1.75" }],
-        "body-lg": ["18px", { lineHeight: "1.75" }],
-      },
-      spacing: {
-        section: "120px",
-      },
-      borderRadius: {
-        card: "16px",
-      },
-      boxShadow: {
-        soft: "0 1px 3px 0 rgba(15, 43, 70, 0.05), 0 1px 2px 0 rgba(15, 43, 70, 0.03)",
       },
     },
   },

@@ -1,110 +1,96 @@
 /**
- * Users API Routes
+ * Users API Routes — Google OAuth
  *
- * POST /api/users/signup   → Create user with name + selected clubs
- * POST /api/users/login    → Look up existing user by name
- * GET  /api/users/:id      → Get user profile + their clubs
- * PUT  /api/users/:id/parts → Update a user's club memberships
+ * POST /api/users/google-auth  → Verify Google JWT, find/create user
+ * GET  /api/users/:id          → Get user profile
+ * PUT  /api/users/:id/parts    → Update club memberships
  */
 
 const express = require("express");
+const { OAuth2Client } = require("google-auth-library");
 const config = require("../config");
 const userService = require("../services/userService");
 
 const router = express.Router();
+const googleClient = new OAuth2Client(config.google.clientId);
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POST /api/users/signup — Create new user
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.post("/signup", (req, res) => {
-  const { name, partIds } = req.body;
+// Helper — shape user for API response
+function formatUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    picture: user.picture,
+    partIds: user.partIds,
+    parts: user.partIds.map((id) => config.parts[id]).filter(Boolean),
+    role: user.role || "member",
+    adminClubs: user.adminClubs || [],
+  };
+}
 
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: "Name is required" });
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /api/users/google-auth — Verify Google JWT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.post("/google-auth", async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).json({ error: "Missing Google credential" });
   }
 
-  if (!partIds || !Array.isArray(partIds) || partIds.length === 0) {
-    return res.status(400).json({ error: "Select at least one club" });
+  if (!config.google.clientId) {
+    return res.status(500).json({ error: "GOOGLE_CLIENT_ID not configured on server" });
   }
 
-  // Validate all partIds exist
-  const invalidParts = partIds.filter((id) => !config.parts[id]);
-  if (invalidParts.length > 0) {
-    return res.status(400).json({
-      error: `Invalid club IDs: ${invalidParts.join(", ")}`,
-      validParts: Object.keys(config.parts),
+  // Step 1: verify JWT with Google
+  let payload;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: config.google.clientId,
     });
+    payload = ticket.getPayload();
+  } catch (err) {
+    console.error("[Auth] Google JWT verification failed:", err.message);
+    return res.status(401).json({ error: "Invalid Google credential", detail: err.message });
   }
 
-  const user = userService.createUser(name.trim(), partIds);
-
-  res.status(user.alreadyExists ? 200 : 201).json({
-    user: {
-      id: user.id,
-      name: user.name,
-      partIds: user.partIds,
-      parts: user.partIds.map((id) => config.parts[id]),
-    },
-    isNew: !user.alreadyExists,
-    message: user.alreadyExists
-      ? "Welcome back! Logged in with existing account."
-      : "Account created successfully.",
-  });
+  // Step 2: find or create user in DynamoDB
+  try {
+    const googleProfile = {
+      sub: payload.sub,
+      name: payload.name,
+      email: payload.email,
+      picture: payload.picture,
+    };
+    console.log(`[Auth] Google sign-in: ${googleProfile.name} (${googleProfile.email})`);
+    const { user, isNew } = await userService.findOrCreateFromGoogle(googleProfile);
+    res.json({ user: formatUser(user), isNew });
+  } catch (err) {
+    console.error("[Auth] User lookup/creation failed:", err.message);
+    res.status(500).json({ error: "Failed to load user profile", detail: err.message });
+  }
 });
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POST /api/users/login — Look up user by name
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.post("/login", (req, res) => {
-  const { name } = req.body;
-
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: "Name is required" });
-  }
-
-  const user = userService.getUserByName(name.trim());
-
-  if (!user) {
-    return res.status(404).json({
-      error: "No account found with that name",
-      suggestion: "signup",
-    });
-  }
-
-  res.json({
-    user: {
-      id: user.id,
-      name: user.name,
-      partIds: user.partIds,
-      parts: user.partIds.map((id) => config.parts[id]),
-    },
-  });
-});
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /api/users/:id — Get user profile
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.get("/:id", (req, res) => {
-  const user = userService.getUserById(req.params.id);
-
-  if (!user) {
-    return res.status(404).json({ error: "User not found" });
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/:id", async (req, res) => {
+  try {
+    const user = await userService.getUserById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ user: formatUser(user) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.json({
-    user: {
-      id: user.id,
-      name: user.name,
-      partIds: user.partIds,
-      parts: user.partIds.map((id) => config.parts[id]),
-    },
-  });
 });
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // PUT /api/users/:id/parts — Update club memberships
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.put("/:id/parts", (req, res) => {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.put("/:id/parts", async (req, res) => {
   const { partIds } = req.body;
 
   if (!partIds || !Array.isArray(partIds) || partIds.length === 0) {
@@ -117,15 +103,8 @@ router.put("/:id/parts", (req, res) => {
   }
 
   try {
-    const user = userService.updateUserParts(req.params.id, partIds);
-    res.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        partIds: user.partIds,
-        parts: user.partIds.map((id) => config.parts[id]),
-      },
-    });
+    const user = await userService.updateUserParts(req.params.id, partIds);
+    res.json({ user: formatUser(user) });
   } catch (err) {
     res.status(404).json({ error: err.message });
   }

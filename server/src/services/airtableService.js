@@ -74,4 +74,68 @@ async function appendReceiptRow(partId, receiptData, receiptId, status = "auto",
   return data;
 }
 
-module.exports = { appendReceiptRow };
+/**
+ * Fetch all receipt records for a club from Airtable, sorted newest first.
+ *
+ * @param {string} partId - Club ID
+ * @returns {Promise<Array<{ id: string, fields: object }>>}
+ */
+async function getClubReceipts(partId) {
+  const part = config.parts[partId];
+  if (!part) throw new Error(`Unknown part: ${partId}`);
+
+  if (!config.airtable.apiToken || !config.airtable.baseId) {
+    throw new Error("Airtable credentials not configured");
+  }
+
+  const tableName = encodeURIComponent(part.tableName);
+  const url = `${AIRTABLE_API_URL}/${config.airtable.baseId}/${tableName}?sort%5B0%5D%5Bfield%5D=Timestamp&sort%5B0%5D%5Bdirection%5D=desc`;
+
+  console.log(`[Airtable] GET ${url}`);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${config.airtable.apiToken}` },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[Airtable] GET ${response.status}:`, errorBody);
+    throw new Error(`Airtable API error: ${response.status} — ${errorBody}`);
+  }
+
+  const data = await response.json();
+  return data.records || [];
+}
+
+/**
+ * Delete a specific record from a club's Airtable table.
+ *
+ * @param {string} partId - Club ID
+ * @param {string} recordId - Airtable record ID (starts with "rec")
+ */
+async function deleteClubRecord(partId, recordId) {
+  const part = config.parts[partId];
+  if (!part) throw new Error(`Unknown part: ${partId}`);
+
+  if (!config.airtable.apiToken || !config.airtable.baseId) {
+    throw new Error("Airtable credentials not configured");
+  }
+
+  const tableName = encodeURIComponent(part.tableName);
+  const url = `${AIRTABLE_API_URL}/${config.airtable.baseId}/${tableName}/${recordId}`;
+
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${config.airtable.apiToken}` },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Airtable API error: ${response.status} — ${errorBody}`);
+  }
+
+  console.log(`[Airtable] Deleted record ${recordId} from "${part.tableName}"`);
+  return await response.json();
+}
+
+module.exports = { appendReceiptRow, getClubReceipts, deleteClubRecord };

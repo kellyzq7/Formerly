@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Build output
+dist/
+build/
+
+# Uploads (user-uploaded receipt images)
+server/uploads/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

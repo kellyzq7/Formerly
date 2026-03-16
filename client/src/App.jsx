@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
-import SignUp from "./components/SignUp";
-import Login from "./components/Login";
+import React, { useState, useEffect, useCallback } from "react";
+import GoogleAuth from "./components/GoogleAuth";
+import ClubSetup from "./components/ClubSetup";
 import PartPicker from "./components/PartPicker";
 import ReceiptCapture from "./components/ReceiptCapture";
 import ReviewCard from "./components/ReviewCard";
 import SuccessScreen from "./components/SuccessScreen";
 import Header from "./components/Header";
+import AdminDashboard from "./components/AdminDashboard";
 import {
   fetchParts,
-  signUp,
-  login,
+  googleAuth,
+  updateUserParts,
   getUser,
   uploadReceipt,
   extractReceipt,
@@ -18,12 +19,13 @@ import {
 
 /**
  * Screen flow:
- * signup/login → select-part → capture → extracting → review → submitting → success
+ * google-sign-in → (club-setup if new user) → select-part → capture → extracting → review → submitting → success
  */
 
 const SCREENS = {
-  SIGNUP: "signup",
-  LOGIN: "login",
+  GOOGLE_SIGN_IN: "google-sign-in",
+  CLUB_SETUP: "club-setup",
+  ADMIN_DASHBOARD: "admin-dashboard",
   SELECT_PART: "select-part",
   CAPTURE: "capture",
   EXTRACTING: "extracting",
@@ -32,14 +34,17 @@ const SCREENS = {
   SUCCESS: "success",
 };
 
+// Google Client ID — set in client/.env as VITE_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+
 export default function App() {
   // ── Auth state ──
-  const [user, setUser] = useState(null); // { id, name, partIds, parts }
+  const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
 
   // ── App state ──
-  const [screen, setScreen] = useState(SCREENS.SIGNUP);
+  const [screen, setScreen] = useState(SCREENS.GOOGLE_SIGN_IN);
   const [allParts, setAllParts] = useState([]);
   const [selectedPart, setSelectedPart] = useState(null);
   const [receiptId, setReceiptId] = useState(null);
@@ -53,9 +58,9 @@ export default function App() {
       .then(setAllParts)
       .catch(() => {
         setAllParts([
-          { id: "build", name: "Build" },
-          { id: "programming", name: "Programming" },
-          { id: "outreach", name: "Outreach" },
+          { id: "aws-cloud-club", name: "AWS Cloud Club" },
+          { id: "bruin-ai", name: "Bruin AI" },
+          { id: "ieee", name: "IEEE" },
         ]);
       });
   }, []);
@@ -67,61 +72,78 @@ export default function App() {
       getUser(savedUserId)
         .then((data) => {
           setUser(data.user);
-          setScreen(SCREENS.SELECT_PART);
+          if (data.user.role === "admin") {
+            setScreen(SCREENS.ADMIN_DASHBOARD);
+          } else if (data.user.partIds?.length > 0) {
+            setScreen(SCREENS.SELECT_PART);
+          } else {
+            setScreen(SCREENS.CLUB_SETUP);
+          }
           const lastPart = localStorage.getItem("lastPartId");
-          if (lastPart && data.user.partIds.includes(lastPart)) {
+          if (lastPart && data.user.partIds?.includes(lastPart)) {
             setSelectedPart(lastPart);
           }
         })
         .catch(() => {
           localStorage.removeItem("userId");
-          setScreen(SCREENS.SIGNUP);
+          setScreen(SCREENS.GOOGLE_SIGN_IN);
         });
     }
   }, []);
 
-  // ── User's clubs only (filtered from all parts) ──
+  // ── User's clubs only ──
   const userParts = allParts.filter((p) => user?.partIds?.includes(p.id));
 
   // ━━━━━━━━━━━━━━━━━━━━━
-  // Auth handlers
+  // Google Auth handler
   // ━━━━━━━━━━━━━━━━━━━━━
 
-  const handleSignUp = async (name, partIds) => {
+  const handleGoogleSuccess = useCallback(async (credential) => {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      const result = await signUp(name, partIds);
+      const result = await googleAuth(credential);
       setUser(result.user);
       localStorage.setItem("userId", result.user.id);
-      setScreen(SCREENS.SELECT_PART);
+
+      if (result.user.role === "admin") {
+        setScreen(SCREENS.ADMIN_DASHBOARD);
+      } else if (result.isNew || !result.user.partIds?.length) {
+        setScreen(SCREENS.CLUB_SETUP);
+      } else {
+        setScreen(SCREENS.SELECT_PART);
+      }
     } catch (err) {
-      setAuthError(err.response?.data?.error || "Signup failed");
+      console.error("Google auth failed:", err);
+      setAuthError(err.response?.data?.error || "Sign-in failed. Please try again.");
     } finally {
       setAuthLoading(false);
     }
-  };
+  }, []);
 
-  const handleLogin = async (name) => {
+  // ━━━━━━━━━━━━━━━━━━━━━
+  // Club setup handler (new users)
+  // ━━━━━━━━━━━━━━━━━━━━━
+
+  const handleClubSetup = async (partIds) => {
     setAuthLoading(true);
-    setAuthError(null);
     try {
-      const result = await login(name);
+      const result = await updateUserParts(user.id, partIds);
       setUser(result.user);
-      localStorage.setItem("userId", result.user.id);
       setScreen(SCREENS.SELECT_PART);
     } catch (err) {
-      if (err.response?.status === 404) {
-        setAuthError("No account found with that name. Try signing up instead.");
-      } else {
-        setAuthError(err.response?.data?.error || "Login failed");
-      }
+      console.error("Club setup failed:", err);
+      setAuthError(err.response?.data?.error || "Failed to save clubs");
     } finally {
       setAuthLoading(false);
     }
   };
 
   const handleLogout = () => {
+    // Disable Google auto-select so the user can pick a different account
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.disableAutoSelect();
+    }
     setUser(null);
     setSelectedPart(null);
     setReceiptId(null);
@@ -130,7 +152,7 @@ export default function App() {
     setError(null);
     localStorage.removeItem("userId");
     localStorage.removeItem("lastPartId");
-    setScreen(SCREENS.LOGIN);
+    setScreen(SCREENS.GOOGLE_SIGN_IN);
   };
 
   // ━━━━━━━━━━━━━━━━━━━━━
@@ -201,50 +223,97 @@ export default function App() {
     setScreen(SCREENS.CAPTURE);
   };
 
+  // Admin: switch from dashboard to receipt upload flow
+  const handleSubmitReceipt = () => {
+    if (!user?.partIds?.length) {
+      setScreen(SCREENS.CLUB_SETUP);
+    } else {
+      setScreen(SCREENS.SELECT_PART);
+    }
+  };
+
+  // Admin: return to dashboard after submitting a receipt
+  const handleReturnToAdmin = () => {
+    setReceiptId(null);
+    setExtractedData(null);
+    setImagePreview(null);
+    setError(null);
+    setSelectedPart(null);
+    setScreen(SCREENS.ADMIN_DASHBOARD);
+  };
+
   // ── Render ──
-  const isAuthScreen = screen === SCREENS.SIGNUP || screen === SCREENS.LOGIN;
+  const isPreAuthScreen = screen === SCREENS.GOOGLE_SIGN_IN || screen === SCREENS.CLUB_SETUP;
+  const isAdmin = user?.role === "admin";
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F6F1E8" }}>
-      {!isAuthScreen && (
+    <div className="min-h-screen bg-gray-50">
+      {!isPreAuthScreen && (
         <Header
           user={user}
           selectedPart={userParts.find((p) => p.id === selectedPart)}
           onChangePart={
-            screen !== SCREENS.EXTRACTING && screen !== SCREENS.SUBMITTING
+            !isAdmin && screen !== SCREENS.EXTRACTING && screen !== SCREENS.SUBMITTING && screen !== SCREENS.ADMIN_DASHBOARD
               ? handleChangePart
+              : undefined
+          }
+          onReturnToAdmin={
+            isAdmin && screen !== SCREENS.ADMIN_DASHBOARD && screen !== SCREENS.EXTRACTING && screen !== SCREENS.SUBMITTING
+              ? handleReturnToAdmin
               : undefined
           }
           onLogout={handleLogout}
         />
       )}
 
-      <main className="max-w-lg mx-auto px-4" style={{ paddingTop: "120px", paddingBottom: "120px" }}>
-        {/* Error banner */}
-        {error && (
-          <div className="mb-6 p-4 rounded-card border border-soft shadow-soft fade-in" style={{ backgroundColor: "#FBF7F2" }}>
-            <p className="font-semibold text-navy mb-1" style={{ color: "#0F2B46" }}>Something went wrong</p>
-            <p className="text-sm" style={{ color: "#0F2B46" }}>{error}</p>
+      <main className="max-w-lg mx-auto px-4 py-6">
+        {/* Error banners */}
+        {authError && isPreAuthScreen && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm fade-in">
+            <p>{authError}</p>
+          </div>
+        )}
+
+        {error && !isPreAuthScreen && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm fade-in">
+            <p className="font-medium">Something went wrong</p>
+            <p>{error}</p>
+          </div>
+        )}
+
+        {/* Missing client ID warning */}
+        {screen === SCREENS.GOOGLE_SIGN_IN && !GOOGLE_CLIENT_ID && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+            <p className="font-medium">Google Client ID not configured</p>
+            <p>Set <code className="bg-amber-100 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> in <code className="bg-amber-100 px-1 rounded">client/.env</code></p>
           </div>
         )}
 
         {/* ── Auth screens ── */}
-        {screen === SCREENS.SIGNUP && (
-          <SignUp
-            parts={allParts}
-            onSignUp={handleSignUp}
-            onSwitchToLogin={() => { setAuthError(null); setScreen(SCREENS.LOGIN); }}
+        {screen === SCREENS.GOOGLE_SIGN_IN && (
+          <GoogleAuth
+            clientId={GOOGLE_CLIENT_ID}
+            onSuccess={handleGoogleSuccess}
             loading={authLoading}
-            error={authError}
           />
         )}
 
-        {screen === SCREENS.LOGIN && (
-          <Login
-            onLogin={handleLogin}
-            onSwitchToSignUp={() => { setAuthError(null); setScreen(SCREENS.SIGNUP); }}
+        {screen === SCREENS.CLUB_SETUP && (
+          <ClubSetup
+            parts={allParts}
+            userName={user?.name}
+            userPicture={user?.picture}
+            onComplete={handleClubSetup}
             loading={authLoading}
-            error={authError}
+          />
+        )}
+
+        {/* ── Admin dashboard ── */}
+        {screen === SCREENS.ADMIN_DASHBOARD && (
+          <AdminDashboard
+            user={user}
+            allParts={allParts}
+            onSubmitReceipt={handleSubmitReceipt}
           />
         )}
 
@@ -263,17 +332,17 @@ export default function App() {
         )}
 
         {screen === SCREENS.EXTRACTING && (
-          <div className="text-center fade-in" style={{ paddingTop: "80px", paddingBottom: "80px" }}>
-            <div className="w-20 h-20 mx-auto mb-8 rounded-card flex items-center justify-center" style={{ backgroundColor: "#CFE8F6" }}>
-              <svg className="w-10 h-10 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: "#5BA7D1" }}>
+          <div className="text-center py-16 fade-in">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-nova-100 flex items-center justify-center pulse-glow">
+              <svg className="w-10 h-10 text-nova-600 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-display font-semibold mb-2" style={{ color: "#0F2B46" }}>Nova is reading your receipt…</h2>
-            <p className="text-body-lg mt-2" style={{ color: "#0F2B46", opacity: 0.7 }}>This usually takes a few seconds</p>
+            <h2 className="text-xl font-semibold text-gray-800">Nova is reading your receipt…</h2>
+            <p className="text-gray-500 mt-2">This usually takes a few seconds</p>
             {imagePreview && (
-              <img src={imagePreview} alt="Receipt preview" className="mt-8 max-h-48 mx-auto rounded-card shadow-soft opacity-60" />
+              <img src={imagePreview} alt="Receipt preview" className="mt-6 max-h-48 mx-auto rounded-lg shadow-md opacity-60" />
             )}
           </div>
         )}
@@ -291,13 +360,13 @@ export default function App() {
         )}
 
         {screen === SCREENS.SUBMITTING && (
-          <div className="text-center fade-in" style={{ paddingTop: "80px", paddingBottom: "80px" }}>
-            <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: "#CFE8F6" }}>
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#5BA7D1" }}>
+          <div className="text-center py-16 fade-in">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center animate-pulse">
+              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
             </div>
-            <h2 className="text-2xl font-display font-semibold" style={{ color: "#0F2B46" }}>Submitting to Sheets…</h2>
+            <h2 className="text-xl font-semibold text-gray-800">Submitting to Airtable…</h2>
           </div>
         )}
 
@@ -305,7 +374,8 @@ export default function App() {
           <SuccessScreen
             partName={userParts.find((p) => p.id === selectedPart)?.name}
             onAddAnother={handleAddAnother}
-            onStartOver={handleChangePart}
+            onStartOver={isAdmin ? handleReturnToAdmin : handleChangePart}
+            isAdmin={isAdmin}
           />
         )}
       </main>

@@ -10,27 +10,28 @@ const api = axios.create({
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━
-// User endpoints
+// Auth endpoints
 // ━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Sign up a new user
- * @param {string} name
- * @param {string[]} partIds - Clubs the user belongs to
+ * Authenticate with Google — send the JWT credential from Google Sign-In
+ * Backend verifies it and returns/creates the user
+ * @param {string} credential - JWT ID token from Google
  * @returns {Promise<{user: object, isNew: boolean}>}
  */
-export async function signUp(name, partIds) {
-  const { data } = await api.post("/users/signup", { name, partIds });
+export async function googleAuth(credential) {
+  const { data } = await api.post("/users/google-auth", { credential });
   return data;
 }
 
 /**
- * Log in by name
- * @param {string} name
+ * Update a user's club memberships (used after initial Google sign-in)
+ * @param {string} userId
+ * @param {string[]} partIds
  * @returns {Promise<{user: object}>}
  */
-export async function login(name) {
-  const { data } = await api.post("/users/login", { name });
+export async function updateUserParts(userId, partIds) {
+  const { data } = await api.put(`/users/${userId}/parts`, { partIds });
   return data;
 }
 
@@ -113,6 +114,39 @@ export async function submitReceipt(receiptId, partId, editedData, userName, not
     userName,
   });
 
+  return data;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━
+// Admin endpoints
+// ━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function getStoredUserId() {
+  return localStorage.getItem("userId") || "";
+}
+
+/**
+ * Fetch all receipt records for a club (admin only)
+ * @param {string} clubId
+ * @returns {Promise<{clubId: string, records: Array}>}
+ */
+export async function getClubReceipts(clubId) {
+  const { data } = await api.get(`/admin/clubs/${clubId}/receipts`, {
+    headers: { "x-user-id": getStoredUserId() },
+  });
+  return data;
+}
+
+/**
+ * Delete a receipt record from a club's Airtable table (admin only)
+ * @param {string} clubId
+ * @param {string} recordId - Airtable record ID
+ * @returns {Promise<{success: boolean, recordId: string}>}
+ */
+export async function deleteClubReceipt(clubId, recordId) {
+  const { data } = await api.delete(`/admin/clubs/${clubId}/receipts/${recordId}`, {
+    headers: { "x-user-id": getStoredUserId() },
+  });
   return data;
 }
 

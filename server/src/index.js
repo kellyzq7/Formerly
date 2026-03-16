@@ -2,7 +2,7 @@
  * Nova Receipt Reimbursement App — Server Entry Point
  */
 
-require("dotenv").config();
+require("dotenv").config({ path: require("path").join(__dirname, "../.env"), override: true });
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -30,6 +30,7 @@ app.use((req, res, next) => {
 app.use("/api/users", require("./routes/users"));
 app.use("/api/receipts", require("./routes/receipts"));
 app.use("/api/parts", require("./routes/parts"));
+app.use("/api/admin", require("./routes/admin"));
 
 // ── Health check ──
 app.get("/api/health", (req, res) => {
@@ -58,15 +59,20 @@ app.use((err, req, res, next) => {
 app.listen(config.port, () => {
   console.log(`
   ╔══════════════════════════════════════════╗
-  ║  Nova Receipt App — Server              ║
+  ║  Formerly — Server                      ║
   ║  http://localhost:${config.port}                ║
   ║  Environment: ${config.env.padEnd(26)}║
   ╚══════════════════════════════════════════╝
   `);
 
   // Validate config on startup
+  if (!config.google.clientId) {
+    console.warn("⚠️  GOOGLE_CLIENT_ID not set — Google sign-in will fail");
+  }
   if (!config.airtable.apiToken || !config.airtable.baseId) {
     console.warn("⚠️  AIRTABLE credentials not set — submission will fail");
+  } else {
+    console.log(`[Airtable] baseId="${config.airtable.baseId}" (${config.airtable.baseId.length} chars)`);
   }
   if (!process.env.AWS_ACCESS_KEY_ID && !process.env.AWS_PROFILE) {
     console.warn("⚠️  AWS credentials not detected — Nova extraction will fail");

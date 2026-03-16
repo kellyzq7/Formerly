@@ -1,19 +1,19 @@
 import React from "react";
 
 const PART_ICONS = {
-  build: (
+  "aws-cloud-club": (
     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.42 15.17l-5.658-5.658a2.122 2.122 0 113-3L14.42 12.17m0 0L18.58 16.34m-4.16-4.17L6.34 4.01a2.122 2.122 0 00-3 3l8.08 8.08m4.16-4.17l3.354 3.354a2.122 2.122 0 01-3 3L14.42 12.17" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
     </svg>
   ),
-  programming: (
+  "bruin-ai": (
     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
     </svg>
   ),
-  outreach: (
+  "ieee": (
     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
   ),
 };
@@ -21,11 +21,11 @@ const PART_ICONS = {
 export default function PartPicker({ parts, selectedPart, onSelect, userName }) {
   return (
     <div className="fade-in">
-      <div className="text-center mb-12">
-        <h2 className="text-3xl font-display font-semibold mb-2" style={{ color: "#0F2B46" }}>
+      <div className="text-center mb-8 pt-4">
+        <h2 className="text-2xl font-bold text-gray-900">
           {userName ? `Hey ${userName}!` : "Which team?"}
         </h2>
-        <p className="text-body-lg" style={{ color: "#0F2B46", opacity: 0.7 }}>
+        <p className="text-gray-500 mt-1">
           {parts.length > 1
             ? "Select a club to submit a receipt"
             : "Submit a receipt for your club"}
@@ -37,28 +37,18 @@ export default function PartPicker({ parts, selectedPart, onSelect, userName }) 
           <button
             key={part.id}
             onClick={() => onSelect(part.id)}
-            className="w-full flex items-center gap-4 p-5 rounded-card border transition-all duration-200 text-left shadow-soft"
-            style={{
-              backgroundColor: selectedPart === part.id ? "#CFE8F6" : "#FBF7F2",
-              borderColor: selectedPart === part.id ? "#5BA7D1" : "#E4E8ED"
-            }}
-            onMouseEnter={(e) => {
-              if (selectedPart !== part.id) {
-                e.currentTarget.style.borderColor = "#5BA7D1";
+            className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-left
+              ${
+                selectedPart === part.id
+                  ? "border-nova-500 bg-nova-50 shadow-md"
+                  : "border-gray-200 bg-white hover:border-nova-300 hover:shadow-sm"
               }
-            }}
-            onMouseLeave={(e) => {
-              if (selectedPart !== part.id) {
-                e.currentTarget.style.borderColor = "#E4E8ED";
-              }
-            }}
+            `}
           >
             <div
-              className="w-14 h-14 rounded-card flex items-center justify-center flex-shrink-0"
-              style={{
-                backgroundColor: selectedPart === part.id ? "#5BA7D1" : "#CFE8F6",
-                color: selectedPart === part.id ? "white" : "#0F2B46"
-              }}
+              className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0
+              ${selectedPart === part.id ? "bg-nova-100 text-nova-700" : "bg-gray-100 text-gray-500"}
+            `}
             >
               {PART_ICONS[part.id] || (
                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,11 +56,11 @@ export default function PartPicker({ parts, selectedPart, onSelect, userName }) 
                 </svg>
               )}
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-body-lg mb-0.5" style={{ color: "#0F2B46" }}>{part.name}</p>
-              <p className="text-sm" style={{ color: "#0F2B46", opacity: 0.7 }}>Submit receipts for {part.name}</p>
+            <div>
+              <p className="font-semibold text-gray-900 text-lg">{part.name}</p>
+              <p className="text-sm text-gray-500">Submit receipts for {part.name}</p>
             </div>
-            <svg className="w-5 h-5 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#5BA7D1" }}>
+            <svg className="w-5 h-5 text-gray-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>

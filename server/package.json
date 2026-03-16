@@ -9,9 +9,12 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.700.0",
+    "@aws-sdk/client-dynamodb": "^3.1009.0",
+    "@aws-sdk/lib-dynamodb": "^3.1009.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.1",
+    "google-auth-library": "^9.14.0",
     "multer": "^1.4.5-lts.1",
     "uuid": "^11.0.3"
   },

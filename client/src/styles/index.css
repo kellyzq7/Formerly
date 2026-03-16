@@ -3,18 +3,8 @@
 @tailwind utilities;
 
 body {
-  @apply antialiased;
-  background-color: #F6F1E8;
-  color: #0F2B46;
-  font-family: "Inter", system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 1.75;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: "General Sans", "Satoshi", system-ui, sans-serif;
-  font-weight: 600;
-  color: #0F2B46;
+  @apply bg-gray-50 text-gray-900 antialiased;
+  font-family: "DM Sans", system-ui, sans-serif;
 }
 
 /* Smooth page transitions */
@@ -41,9 +31,14 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes pulseGlow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(91, 167, 209, 0.3);
+    box-shadow: 0 0 0 0 rgba(92, 124, 250, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(91, 167, 209, 0);
+    box-shadow: 0 0 0 12px rgba(92, 124, 250, 0);
   }
+}
+
+/* Low confidence field highlight */
+.low-confidence {
+  @apply ring-2 ring-amber-400 bg-amber-50;
 }
