@@ -11,6 +11,7 @@ export default function SheetPreview({ data, partName, userName }) {
     { header: "SubmittedBy", value: userName || "—" },
     { header: "Part", value: partName || "—" },
     { header: "Merchant", value: data?.merchant || "—" },
+    { header: "Item", value: data?.item || "—" },
     { header: "Date", value: data?.date || "—" },
     { header: "Total", value: data?.total != null ? `$${Number(data.total).toFixed(2)}` : "—" },
     { header: "Tax", value: data?.tax != null ? `$${Number(data.tax).toFixed(2)}` : "—" },

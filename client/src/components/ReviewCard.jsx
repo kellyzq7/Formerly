@@ -3,6 +3,7 @@ import SheetPreview from "./SheetPreview";
 
 const EMPTY_DATA = {
   merchant: "",
+  item: "",
   date: "",
   total: "",
   tax: "",
@@ -31,6 +32,7 @@ export default function ReviewCard({
     if (data) {
       setFormData({
         merchant: data.merchant || "",
+        item: data.item || "",
         date: data.date || "",
         total: data.total != null ? String(data.total) : "",
         tax: data.tax != null ? String(data.tax) : "",
@@ -126,6 +128,19 @@ export default function ReviewCard({
             onChange={(e) => handleChange("merchant", e.target.value)}
             placeholder="e.g. Home Depot"
             className={fieldClass("merchant")}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Item Purchased
+          </label>
+          <input
+            type="text"
+            value={formData.item}
+            onChange={(e) => handleChange("item", e.target.value)}
+            placeholder="e.g. Soldering Iron, Conference Tickets, Arduino Kit"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-nova-500 bg-white"
           />
         </div>
 

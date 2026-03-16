@@ -100,6 +100,27 @@ export default function AdminDashboard({ user, allParts, onSubmitReceipt }) {
         </div>
       )}
 
+      {/* Financial summary */}
+      {!loading && records.length > 0 && (() => {
+        const total = records.reduce((sum, r) => sum + (Number(r.fields?.Total) || 0), 0);
+        const avg = total / records.length;
+        const stats = [
+          { label: "Total Spent", value: `$${total.toFixed(2)}` },
+          { label: "Receipts", value: records.length },
+          { label: "Avg per Receipt", value: `$${avg.toFixed(2)}` },
+        ];
+        return (
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {stats.map((s) => (
+              <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+                <p className="text-xs text-gray-400 mb-0.5">{s.label}</p>
+                <p className="text-lg font-semibold text-gray-900">{s.value}</p>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Table card */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Table toolbar */}
